@@ -1,36 +1,57 @@
-# Multiple Linear regression
-# napoved vrednosti in korelacije med več spremenljivkami
-# oziroma atributi
+# Multipla Linearna Regresija
+# napoved vrednosti in korelacije med več spremenljivkami/atributi
+# 1. Sestavi zasnovno matriko: vrstice podatkovne vrednosti, stolpci parametri
+# 2. Izracun regresijskih koeficientov:
+#		a.Množenje transponirane zasnovne matrike same s sabo.
+#		b.Množenje transponirane zasnovne matrike z vektorjem ciljnih vrednosti.
+#		c.Množenje inverzne matrike iz koraka a z matriko iz koraka b.
+# 3. S koeficienti izracun napovedanih ciljnih vrednosti. Razlike med opazovanimi
+# 	 in napovedanimi vrednostmi-ostanki.
+# 4. Preizkus modela.
 
+import numpy as np
 import pandas as pd
 from sklearn import linear_model
 import statsmodels.api as sm
+import matplotlib.pyplot as plt
 
 # Definirani atributi, ki jih preskocimo
 columns_to_skip = ['ID', 'DAN', 'LETO', 'DAN_V_TEDNU', 'TEDEN', 'DAN_V_MESECU', 'DATUM', 'STEVEC', 'MIN_VREDNOST']
 
-df = pd.read_csv('naloga.csv', delimiter=";", header=0, usecols=lambda x: x not in columns_to_skip)
- 
-df['MAX_VREDNOST'] = df['MAX_VREDNOST'].apply(lambda x : float(x.replace(",",".")))
-df['MAX_PRET_TED'] = df['MAX_PRET_TED'].apply(lambda x : float(x.replace(",",".")))
+#Izbrani podatki
+df = pd.read_csv('naloga.csv', delimiter=";", decimal=",", header=0, usecols=lambda x: x not in columns_to_skip)
 
+# Izberi podatke za x in y
+x = df.drop(columns = 'MAX_VREDNOST')
+y=df['MAX_VREDNOST']
 
-x = df['MAX_PRET_TED']# independent variable
-y = df['MAX_VREDNOST']# dependent variable
+# Razdelimo podatke na učno in testno množico 7:3
+from sklearn.model_selection import train_test_split
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state = 100)
 
+from sklearn.linear_model import LinearRegression
+lr = LinearRegression()
 
-# with sklearn
-regr = linear_model.LinearRegression()
-regr.fit(x, y)
+lr.fit(x_train, y_train)
 
-print('Intercept: \n', regr.intercept_)
-print('Coefficients: \n', regr.coef_)
+c = lr.intercept_
 
-# with statsmodels
-x = sm.add_constant(x) # adding a constant
- 
-model = sm.OLS(y, x).fit()
-predictions = model.predict(x) 
- 
-print_model = model.summary()
-print(print_model)
+m = lr.coef_
+#print(c, m)
+
+y_pred_train = lr.predict(x_test)
+
+#print("Prediction for test set: {}".format(y_pred_train))
+
+mlr_diff = pd.DataFrame({'Actual value': y_test, 'Predicted value': y_pred_train})
+print(mlr_diff.head())
+
+#Model Evaluation
+from sklearn import metrics
+meanAbErr = metrics.mean_absolute_error(y_test,y_pred_train)
+meanSqErr = metrics.mean_squared_error(y_test, y_pred_train)
+rootMeanSqErr = np.sqrt(metrics.mean_squared_error(y_test, y_pred_train))
+print('R squared: {:.2f}'.format(lr.score(x,y)*100))
+print('Mean Absolute Error:', meanAbErr)
+print('Mean Square Error:', meanSqErr)
+print('Root Mean Square Error:', rootMeanSqErr)
